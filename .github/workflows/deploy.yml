@@ -33,7 +33,7 @@ jobs:
 
       - name: Zip Process Feedback Lambda
         run: |
-          cd lambda/lambda/cloudwithshad-process-feedback-c85a3588-a7d7-4268-947a-6aa3dccaf10a
+          cd lambda/cloudwithshad-process-feedback-c85a3588-a7d7-4268-947a-6aa3dccaf10a
           zip -r ../../cloudwithshad-process-feedback-c85a3588-a7d7-4268-947a-6aa3dccaf10a.zip .
           cd ../..
 
