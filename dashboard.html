@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS AI Feedback Control Center</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#05060a;
+  --panel: rgba(10, 14, 25, 0.75);
+  --cyan:#00e5ff;
+  --blue:#3b82f6;
+  --orange:#ff7a18;
+  --green:#22c55e;
+  --red:#ff3b3b;
+  --text:#e5f2ff;
+  --muted:#8aa0b6;
+}
+
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  font-family:Inter,sans-serif;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(0,229,255,0.15), transparent 40%),
+    radial-gradient(circle at 80% 30%, rgba(255,122,24,0.12), transparent 45%),
+    radial-gradient(circle at 50% 90%, rgba(59,130,246,0.12), transparent 50%),
+    var(--bg);
+  color:var(--text);
+  padding:clamp(12px,3vw,28px);
+}
+
+.header{text-align:center;margin-bottom:22px;}
+.header h1{font-size:28px;margin:0;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px;}
+.header p{color:var(--muted);font-size:13px;}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
+.kpi{background:var(--panel);border:1px solid rgba(0,229,255,.15);border-radius:14px;padding:16px;box-shadow:0 0 20px rgba(0,229,255,.05);position:relative;overflow:hidden;}
+.kpi::after{content:"";position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(0,229,255,.12),transparent 60%);opacity:.4;}
+.kpi h3{margin:0;font-size:11px;color:var(--muted);text-transform:uppercase;}
+.kpi h2{margin:8px 0 0;font-size:28px;}
+
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px;}
+.card{background:var(--panel);border:1px solid rgba(0,229,255,.12);border-radius:14px;padding:16px;box-shadow:0 0 25px rgba(0,229,255,.04);backdrop-filter:blur(10px);}
+.card h3{margin:0 0 10px;font-size:12px;color:var(--muted);}
+.chart-card{height:260px;display:flex;flex-direction:column;}
+.chart-wrapper{position:relative;height:200px;width:100%;}
+
+table{width:100%;border-collapse:collapse;display:block;overflow-x:auto;white-space:nowrap;}
+th{text-align:left;font-size:10px;color:var(--muted);padding:10px;border-bottom:1px solid rgba(0,229,255,.15);}
+td{padding:10px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.05);}
+tr:hover td{background:rgba(0,229,255,.05);}
+.badge{padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600;}
+.badge-positive{color:var(--green);background:rgba(34,197,94,.1);}
+.badge-negative{color:var(--red);background:rgba(255,59,59,.1);}
+.badge-neutral{color:var(--orange);background:rgba(255,122,24,.1);}
+ul{list-style:none;padding:0;margin:0;}
+li{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;}
+canvas{width:100%!important;max-width:100%;}
+
+@media (max-width:900px){
+.grid{grid-template-columns:1fr;}
+.chart-card{height:320px;}
+.chart-wrapper{height:250px;}
+}
+@media (max-width:600px){
+body{padding:14px;}
+.header h1{font-size:22px;}
+.header p{font-size:12px;}
+.kpi-grid{grid-template-columns:1fr;}
+.kpi{padding:18px;}
+.kpi h2{font-size:34px;}
+.card{padding:18px;}
+.chart-card{height:360px;}
+.chart-wrapper{height:290px;}
+th,td{font-size:12px;}
+}
+@media (max-width:380px){
+.header h1{font-size:20px;}
+.kpi h2{font-size:30px;}
+.chart-card{height:320px;}
+.chart-wrapper{height:250px;}
+}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>AI FEEDBACK HUB</h1>
+<p>Real-time sentiment intelligence + entity tracking system</p>
+</div>
+
+<div class="kpi-grid">
+<div class="kpi"><h3>Total Feedback</h3><h2 id="total">0</h2></div>
+<div class="kpi"><h3>Positive</h3><h2 id="pos">0</h2></div>
+<div class="kpi"><h3>Negative</h3><h2 id="neg">0</h2></div>
+</div>
+
+<div class="grid">
+<div class="card chart-card">
+<h3>Sentiment Distribution</h3>
+<div class="chart-wrapper"><canvas id="sentimentChart"></canvas></div>
+</div>
+<div class="card"><h3>Top Entities</h3><ul id="entities"></ul></div>
+</div>
+
+<div class="card" style="margin-top:14px;">
+<h3>Recent Feedback</h3>
+<table id="table">
+<tr><th>Name</th><th>Message</th><th>Sentiment</th></tr>
+</table>
+</div>
+
+<script>
+const API="https://d5bq71akh5.execute-api.us-east-1.amazonaws.com/stats";
+async function loadData(){
+const res=await fetch(API);const data=await res.json();
+const sentiment=data.sentiment_breakdown||{};
+total.innerText=data.total_feedback||0;
+pos.innerText=sentiment.POSITIVE||0;
+neg.innerText=sentiment.NEGATIVE||0;
+new Chart(document.getElementById("sentimentChart"),{type:"doughnut",data:{labels:Object.keys(sentiment),datasets:[{data:Object.values(sentiment),backgroundColor:["#00e5ff","#ff7a18","#ff3b3b"],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#e5f2ff",font:{size:11}}}}}});
+const list=document.getElementById("entities");list.innerHTML="";
+(data.top_entities||[]).forEach(e=>{const li=document.createElement("li");li.innerHTML=`⚡ ${e[0]} <span style="color:#8aa0b6">(${e[1]})</span>`;list.appendChild(li);});
+const table=document.getElementById("table");
+(data.recent_feedback||[]).forEach(item=>{let badge="badge-neutral";if(item.sentiment==="POSITIVE")badge="badge-positive";if(item.sentiment==="NEGATIVE")badge="badge-negative";const row=table.insertRow();row.innerHTML=`<td>${item.name||""}</td><td>${(item.message||"").substring(0,60)}</td><td><span class="badge ${badge}">${item.sentiment}</span></td>`;});
+}
+loadData();
+</script>
+</body></html>

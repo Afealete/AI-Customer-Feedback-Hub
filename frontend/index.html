@@ -3,23 +3,37 @@
 <head>
 <title>AWS AI Feedback Hub</title>
 
+<!-- ✅ FIX 1: Proper mobile scaling -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body {
   margin:0;
   font-family: Arial;
   background: linear-gradient(120deg,#0f172a,#020617);
   color:white;
+
   display:flex;
   justify-content:center;
   align-items:center;
-  height:100vh;
+
+  /* ✅ FIX 2: better mobile height handling */
+  min-height:100vh;
+  padding:16px; /* prevents edge squeezing on phones */
+  box-sizing:border-box;
 }
 
 .card {
-  width:400px;
+  /* ✅ FIX 3: responsive width instead of fixed 400px */
+  width:100%;
+  max-width:400px;
+
   padding:25px;
   background: rgba(255,255,255,0.05);
   border-radius:15px;
+
+  /* optional improvement: prevents overflow issues */
+  box-sizing:border-box;
 }
 
 input, textarea {
@@ -30,6 +44,7 @@ input, textarea {
   border:none;
   background:#111827;
   color:white;
+  box-sizing:border-box;
 }
 
 button {
@@ -65,7 +80,6 @@ const API_URL = "https://d5bq71akh5.execute-api.us-east-1.amazonaws.com/feedback
 document.getElementById("form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  // ✅ FIX: always use getElementById (safe + reliable)
   const data = {
     name: document.getElementById("name").value.trim(),
     email: document.getElementById("email").value.trim(),
@@ -83,7 +97,7 @@ document.getElementById("form").addEventListener("submit", async (e) => {
       body: JSON.stringify(data)
     });
 
-    const text = await res.text(); // IMPORTANT for debugging
+    const text = await res.text();
     console.log("RAW RESPONSE:", text);
 
     let result;
