@@ -1,0 +1,59 @@
+name: Deploy AI Customer Feedback Hub
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy Frontend to S3
+        run: |
+          aws s3 sync frontend/ s3://${{ secrets.S3_BUCKET }} --delete
+
+      - name: Deploy Frontend to second S3 bucket
+        run: |
+          aws s3 sync frontend/ s3://${{ secrets.S3_BUCKET_1 }} --delete
+
+
+      - name: Zip Process Feedback Lambda
+        run: |
+          cd lambda/process-feedback
+          zip -r ../../process-feedback.zip .
+          cd ../..
+
+      - name: Deploy Process Feedback Lambda
+        run: |
+          aws lambda update-function-code \
+          --function-name ${{ secrets.PROCESS_FEEDBACK_FUNCTION }} \
+          --zip-file fileb://process-feedback.zip
+
+      - name: Zip Stats Lambda
+        run: |
+          cd lambda/get-feedback-stats
+          zip -r ../../stats.zip .
+          cd ../..
+
+      - name: Deploy Stats Lambda
+        run: |
+          aws lambda update-function-code \
+          --function-name ${{ secrets.GET_STATS_FUNCTION }} \
+          --zip-file fileb://stats.zip
+
+
+          
