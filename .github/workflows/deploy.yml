@@ -33,27 +33,27 @@ jobs:
 
       - name: Zip Process Feedback Lambda
         run: |
-          cd lambda/process-feedback
-          zip -r ../../process-feedback.zip .
+          cd lambda/cloudwithshad-process-feedback
+          zip -r ../../cloudwithshad-process-feedback.zip .
           cd ../..
 
       - name: Deploy Process Feedback Lambda
         run: |
           aws lambda update-function-code \
           --function-name ${{ secrets.PROCESS_FEEDBACK_FUNCTION }} \
-          --zip-file fileb://process-feedback.zip
+          --zip-file fileb://cloudwithshad-process-feedback.zip
 
       - name: Zip Stats Lambda
         run: |
           cd lambda/get-feedback-stats
-          zip -r ../../stats.zip .
+          zip -r ../../get-feedback-stats.zip .
           cd ../..
 
       - name: Deploy Stats Lambda
         run: |
           aws lambda update-function-code \
           --function-name ${{ secrets.GET_STATS_FUNCTION }} \
-          --zip-file fileb://stats.zip
+          --zip-file fileb://get-feedback-stats.zip
 
 
           
